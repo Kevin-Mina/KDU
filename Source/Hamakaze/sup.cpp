@@ -4175,7 +4175,7 @@ BOOL supEnsureSuperfetchMemoryMap(
         g_SuperfetchMemoryMapInitialized = TRUE;
 
         supPrintfEvent(kduEventInformation,
-            "[+] Superfetch memory map built: %llu entries from %lu ranges\r\n",
+            "[+] Superfetch memory map built: 0x%llX entries from 0x%lX ranges\r\n",
             g_SuperfetchMemoryMap.TableSize,
             g_SuperfetchMemoryMap.RangeCount);
     }

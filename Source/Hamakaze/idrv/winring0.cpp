@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2020 - 2023
+*  (C) COPYRIGHT AUTHORS, 2020 - 2026
 *
 *  TITLE:       WINRING0.CPP
 *
-*  VERSION:     1.31
+*  VERSION:     1.48
 *
-*  DATE:        14 Apr 2023
+*  DATE:        26 Mar 2026
 *
 *  WinRing0 based drivers routines.
 *
@@ -254,4 +254,64 @@ BOOL WINAPI WRZeroWriteKernelVirtualMemory(
     }
 
     return bResult;
+}
+
+/*
+* WinHdDrvVirtualToPhysical
+*
+* Purpose:
+*
+* Translate virtual address to physical via Superfetch map.
+*
+*/
+BOOL WINAPI WinHdDrvVirtualToPhysical(
+    _In_ HANDLE DeviceHandle,
+    _In_ ULONG_PTR VirtualAddress,
+    _Out_ ULONG_PTR* PhysicalAddress)
+{
+    UNREFERENCED_PARAMETER(DeviceHandle);
+
+    return supVirtualToPhysicalWithSuperfetch(VirtualAddress, PhysicalAddress);
+}
+
+/*
+* WinHdDrvReadKernelVirtualMemory
+*
+* Purpose:
+*
+* Read kernel virtual memory via Superfetch translation + physical memory read.
+*
+*/
+BOOL WINAPI WinHdDrvReadKernelVirtualMemory(
+    _In_ HANDLE DeviceHandle,
+    _In_ ULONG_PTR Address,
+    _In_ PVOID Buffer,
+    _In_ ULONG NumberOfBytes)
+{
+    return supReadKernelVirtualMemoryWithSuperfetch(DeviceHandle,
+        Address,
+        Buffer,
+        NumberOfBytes,
+        WRZeroReadPhysicalMemory);
+}
+
+/*
+* WinHdDrvWriteKernelVirtualMemory
+*
+* Purpose:
+*
+* Write kernel virtual memory via Superfetch translation + physical memory write.
+*
+*/
+BOOL WINAPI WinHdDrvWriteKernelVirtualMemory(
+    _In_ HANDLE DeviceHandle,
+    _In_ ULONG_PTR Address,
+    _In_ PVOID Buffer,
+    _In_ ULONG NumberOfBytes)
+{
+    return supWriteKernelVirtualMemoryWithSuperfetch(DeviceHandle,
+        Address,
+        Buffer,
+        NumberOfBytes,
+        WRZeroWritePhysicalMemory);
 }

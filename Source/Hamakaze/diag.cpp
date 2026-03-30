@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2022 - 2025
+*  (C) COPYRIGHT AUTHORS, 2022 - 2026
 *
 *  TITLE:       DIAG.CPP
 *
-*  VERSION:     1.45
+*  VERSION:     1.48
 *
-*  DATE:        30 Nov 2025
+*  DATE:        26 Mar 2026
 *
 *  Hamakaze system diagnostics component.
 *
@@ -814,7 +814,7 @@ VOID KDUDiagStart()
     __try {
 
         systemRangeStart = ntsupQuerySystemRangeStart();
-        printf_s("> System range start %llX\r\n", systemRangeStart);
+        printf_s("> System range start 0x%llX\r\n", systemRangeStart);
 
         printf_s("> Speculation mitigation state flags\r\n");
         KDUQuerySpecMitigationState();

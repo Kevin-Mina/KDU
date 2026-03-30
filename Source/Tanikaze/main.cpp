@@ -4,9 +4,9 @@
 *
 *  TITLE:       MAIN.CPP
 *
-*  VERSION:     1.46
+*  VERSION:     1.48
 *
-*  DATE:        12 Feb 2026
+*  DATE:        26 Mar 2026
 *
 *  Tanikaze helper dll (part of KDU project).
 *
@@ -23,5 +23,33 @@
 * Nothing
 * 
 * WARNING, THIS DLL MUST BE BUILD IN RELEASE CONFIGURATION, ALWAYS.
+* The below dll entry point is used only during internal tests.
 * 
 */
+
+#ifdef DEBUG
+#pragma comment(linker, "/ENTRY:DllMain")
+
+/*
+* DllMain
+*
+* Purpose:
+*
+* Dll entry point.
+*
+*/
+BOOL WINAPI DllMain(
+    _In_ HINSTANCE hinstDLL,
+    _In_ DWORD fdwReason,
+    _In_ LPVOID lpvReserved)
+{
+    UNREFERENCED_PARAMETER(lpvReserved);
+
+    if (fdwReason == DLL_PROCESS_ATTACH) {
+        DisableThreadLibraryCalls(hinstDLL);
+    }
+
+    return TRUE;
+}
+
+#endif
