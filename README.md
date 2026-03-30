@@ -174,6 +174,9 @@ Note: Provider with Id 0 is assumed as default if no -prv command is specified.
 | 55     | TechPowerUp    | ThrottleStop  | ThrottleStop                       | 3.0.0.0 and below             |                      |
 | 56     | Toshiba        | TPwSav        | Toshiba power saving driver for laptops | 2.0.0.2 and below             |                      |
 | 57     | Lenovo         | LnvMSRIO      | Lenovo filter driver | 3.1.0.35 and below             |                      |
+| 58     | Teledyne       | CorMem      | Sapera Memory Manager | 9.0.0 and below             |                      |
+| 59     | Digital Elect. Corp | Ipctype     | IPCType Device Driver | 1.0.2.0 and below             |                      |
+| 60     | Shangke        | WinHwDrv    | Undefined | Undefined             |                      |
 
 MSFT blacklist types:
 * Cert - by certificate used to sign the driver which makes it possible to ban huge number of files at one time.
@@ -241,6 +244,9 @@ MSFT blacklist types:
 |55|Original|CVE-2025-7771|**File(SHA1):** 82ED942A52CDCF120A8919730E00BA37619661A3<br>**Authenticode(SHA1):** 77BADFEEBC7F448E6B8A52DCF15F48506A0E9A58<br>**Page(SHA1):** 42E937C9E56931AFDE500D68CDA682F8A5997CAF<br>**Page(SHA256):** 05E896E9337F2F6119571B31F3E5C279B357631C439912172E07526A4B5C23A5|
 |56|Original||**File(SHA1):** C1130E09831C7A2E0CC8BA7335E702910B25F526<br>**Authenticode(SHA1):** 8057487B702996C56D4CBB96A0C63A6ED82271B5<br>**Page(SHA1):** 7A1F9284A89B31BF572487F3021415AA0B583F18<br>**Page(SHA256):** 8E141BAB9656CB687407C0BDF8488FCD80631DA8EDE60C12EDF5DDC6D76AF1EC|
 |57|WINRING0|CVE-2025-8061|**File(SHA1):** 0186912447648A5E4B9C9C31D718F605D5E5C925<br>**Authenticode(SHA1):** 68969B2B53412322917BE77774B3175155F28B71<br>**Page(SHA1):** 5285DC2862551EF8C3458E48B46552A912C6D4B2<br>**Page(SHA256):** 1B04665721DEDC651B75B2C1F33613E5332FA9077FEA9BD22B7D24573F615D38|
+|58|MAPMEM||**File(SHA1):** BCEAE6DC87C9C6C33555A4A9008BE14C66FD1E20<br>**Authenticode(SHA1):** 505B7C56888009AB3B9531CAEEE6FA9A9B88916A<br>**Page(SHA1):** 893BDCE0398C15B4549D060DC552799CEAF39802<br>**Page(SHA256):** 1568C603C299383A7F36B8EDA6BC656748737778787B9987F27BB6AD3A718A8F|
+|59|Original||**File(SHA1):** 96611A3D59EA7DF9453E194FB7C19D0F944BCEFC<br>**Authenticode(SHA1):** 5FE6C6CDE2DC32666EFC70A4008D9F987DDF4A63<br>**Page(SHA1):** BF1AE9D0981F4E5868CE8037C8F17FAF8A68F76A<br>**Page(SHA256):** 8171DCA918DE3A9E0AF0F9FE90AFCAA91E245A425BA38D8A11754ACD3CF3FEE2|
+|60|WINRING0||**File(SHA1):** B980DEC0BDF7B0925240D002626E56876AFEEC72<br>**Authenticode(SHA1):** 96C3B210C05511481B8490535828D4EF2EE73A09<br>**Page(SHA1):** A759E2A83CA0D54779DC3FB484549CBEFE6F8B59<br>**Page(SHA256):** FE3123D84B41F372D3A05CED25AE1CD5FF3E09A701610BB4DEC197B5EBB43621|
 
 ###### *At commit time, data may be inaccurate.
 

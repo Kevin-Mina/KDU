@@ -1,10 +1,16 @@
+v 1.4.7 (Mar 27, 2026)
+Added GitHub Actions workflow for building fully functional KDU snapshot
+Added Lenovo LnvMSRIO (CVE-2025-8061) as provider 57
+Centralized Superfetch-based virtual->physical translation and per-page kernel read/write logic for providers 55, 56 and 57
+Readme update
+
 v 1.4.6 (Feb 17, 2026)
 Added Toshiba TPwSav as provider 56 by @fxrstor in #125
 Added Windows Server 2022 support for -ps and -pm commands by @lebr0nli in #126
 Added decompression support for PCOMP auxiliary utility
 Added complete changelog (from version 1.0.0)
 Small bugfixes
-Readme updated
+Readme update
 
 v1.4.5 (Dec 02, 2025)
 Migrated to MSVS 2026 with latest SDK and build tools
