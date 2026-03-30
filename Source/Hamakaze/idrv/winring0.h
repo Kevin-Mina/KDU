@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2020 - 2024
+*  (C) COPYRIGHT AUTHORS, 2020 - 2026
 *
 *  TITLE:       WINRING0.H
 *
-*  VERSION:     1.43
+*  VERSION:     1.48
 *
-*  DATE:        10 Nov 2024
+*  DATE:        26 Mar 2026
 *
 *  WinRing0 based drivers interface header.
 *
@@ -103,4 +103,24 @@ BOOL WINAPI WRZeroWriteKernelVirtualMemory(
     _In_ HANDLE DeviceHandle,
     _In_ ULONG_PTR Address,
     _Out_writes_bytes_(NumberOfBytes) PVOID Buffer,
+    _In_ ULONG NumberOfBytes);
+
+//
+// Guangzhou Shangke Information Technology Co., Ltd. specific.
+//
+BOOL WINAPI WinHdDrvVirtualToPhysical(
+    _In_ HANDLE DeviceHandle,
+    _In_ ULONG_PTR VirtualAddress,
+    _Out_ ULONG_PTR* PhysicalAddress);
+
+BOOL WINAPI WinHdDrvReadKernelVirtualMemory(
+    _In_ HANDLE DeviceHandle,
+    _In_ ULONG_PTR Address,
+    _In_ PVOID Buffer,
+    _In_ ULONG NumberOfBytes);
+
+BOOL WINAPI WinHdDrvWriteKernelVirtualMemory(
+    _In_ HANDLE DeviceHandle,
+    _In_ ULONG_PTR Address,
+    _In_ PVOID Buffer,
     _In_ ULONG NumberOfBytes);

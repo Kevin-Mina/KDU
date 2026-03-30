@@ -494,7 +494,7 @@ VOID KDUTest()
 
     // KDUTestLoad();
     // TestSymbols();
-    Context = KDUProviderCreate(KDU_PROVIDER_IPCTYPE,
+    Context = KDUProviderCreate(KDU_PROVIDER_SHANGKE_WHD,
         FALSE,
         NT_WIN10_20H1,
         KDU_SHELLCODE_V1,

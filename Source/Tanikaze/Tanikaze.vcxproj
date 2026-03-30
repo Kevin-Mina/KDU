@@ -249,6 +249,7 @@
     <None Include="drv\SysDrv3S.bin" />
     <None Include="drv\ThrottleStop.bin" />
     <None Include="drv\TPwSav.bin" />
+    <None Include="drv\WinHwDrv64.bin" />
     <None Include="drv\WinRing0x64.bin" />
     <None Include="drv\wnBios64.bin" />
   </ItemGroup>

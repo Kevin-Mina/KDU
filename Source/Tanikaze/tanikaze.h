@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.48
 *
-*  DATE:        25 Mar 2026
+*  DATE:        26 Mar 2026
 *
 *  Tanikaze helper dll (part of KDU project).
 *
@@ -923,6 +923,21 @@ KDU_DB_ENTRY gProvEntry[] = {
         (LPWSTR)L"IPCType",
         (LPWSTR)L"IPCType",
         (LPWSTR)L"Digital Electronics Corporation"
+    },
+
+    {
+        KDU_MIN_NTBUILDNUMBER,
+        KDU_MAX_NTBUILDNUMBER,
+        IDR_SHANGKE_WHD,
+        KDU_PROVIDER_SHANGKE_WHD,
+        KDU_VICTIM_DEFAULT,
+        SourceBaseWinRing0,
+        KDUPROV_FLAGS_SIGNATURE_WHQL | KDUPROV_FLAGS_PREFER_PHYSICAL | KDUPROV_FLAGS_USE_SUPERFETCH,
+        KDUPROV_SC_ALL_DEFAULT,
+        (LPWSTR)L"Guangzhou Shangke Information Technology giveio driver",
+        (LPWSTR)L"WinHwDriver",
+        (LPWSTR)L"WinHwDriver",
+        (LPWSTR)L"Guangzhou Shangke Information Technology"
     }
 
 };

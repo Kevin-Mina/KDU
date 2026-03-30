@@ -244,6 +244,9 @@
     <None Include="drv\ipctype.bin">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="drv\WinHwDrv64.bin">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">

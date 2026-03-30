@@ -163,6 +163,7 @@
 #define IDR_LENOVOMSRIO                 159
 #define IDR_TELEDYNE                    160
 #define IDR_IPCTYPE                     161
+#define IDR_SHANGKE_WND                 162
 
 //
 // Vulnerable drivers providers id
@@ -227,6 +228,7 @@
 #define KDU_PROVIDER_LENOVOMSRIO        57
 #define KDU_PROVIDER_TELEDYNE           58
 #define KDU_PROVIDER_IPCTYPE            59
+#define KDU_PROVIDER_SHANGKE_WHD        60
 
 #define KDU_PROVIDER_DEFAULT KDU_PROVIDER_INTEL_NAL
 
