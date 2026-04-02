@@ -4,9 +4,9 @@
 *
 *  TITLE:       SUP.CPP
 *
-*  VERSION:     1.47
+*  VERSION:     1.48
 *
-*  DATE:        25 Mar 2026
+*  DATE:        01 Apr 2026
 *
 *  Program global support routines.
 *
@@ -1104,8 +1104,10 @@ NTSTATUS supLoadDriverEx(
 
     if (Callback) {
         status = Callback(&driverServiceName, CallbackParam);
-        if (!NT_SUCCESS(status))
+        if (!NT_SUCCESS(status)) {
+            supRegDeleteKeyTree(HKEY_LOCAL_MACHINE, &szBuffer[keyOffset]);
             return status;
+        }
     }
 
     status = NtLoadDriver(&driverServiceName);
@@ -1124,6 +1126,11 @@ NTSTATUS supLoadDriverEx(
     else {
         if (status == STATUS_OBJECT_NAME_EXISTS)
             status = STATUS_SUCCESS;
+    }
+
+    // Cleanup stale registry entry when load ultimately fails.
+    if (!NT_SUCCESS(status)) {
+        supRegDeleteKeyTree(HKEY_LOCAL_MACHINE, &szBuffer[keyOffset]);
     }
 
     return status;
@@ -2133,6 +2140,7 @@ NTSTATUS supLoadFileForMapping(
 
     pNtHeaders = RtlImageNtHeader(pvImage);
     if (pNtHeaders == NULL) {
+        LdrUnloadDll(pvImage);
         return STATUS_INVALID_IMAGE_FORMAT;
     }
 
@@ -2226,14 +2234,14 @@ NTSTATUS supQueryImageSize(
 }
 
 /*
-* supxBinTextEncode
+* supxCreatePseudoRandomStringFromU64
 *
 * Purpose:
 *
 * Create pseudo random string from UI64 value.
 *
 */
-VOID supxBinTextEncode(
+VOID supxCreatePseudoRandomStringFromU64(
     _In_ unsigned __int64 x,
     _Inout_ wchar_t* s
 )
@@ -2327,7 +2335,7 @@ VOID supGenerateSharedObjectName(
 
     value.HighPart = MAKELONG(ntHeaders->OptionalHeader.CheckSum, ObjectId);
 
-    supxBinTextEncode(value.QuadPart, lpBuffer);
+    supxCreatePseudoRandomStringFromU64(value.QuadPart, lpBuffer);
 }
 
 /*
@@ -2931,6 +2939,10 @@ BOOL supDeleteFileWithWait(
 )
 {
     ULONG retryCount = NumberOfAttempts;
+
+    if (DeleteFile(lpFileName)) {
+        return TRUE;
+    }
 
     do {
 
@@ -3984,7 +3996,7 @@ BOOL supBuildSuperfetchMemoryMap(
     NTSTATUS ntStatus;
     ULONG ntBuildNumber;
     ULONG rangeCount = 0;
-    ULONG i;
+    ULONG i, failedRanges = 0;
     SIZE_T j;
     ULONG_PTR basePfn, pageCount;
     ULONG pfnBufferSize;
@@ -4047,8 +4059,10 @@ BOOL supBuildSuperfetchMemoryMap(
             (pageCount * sizeof(MMPFN_IDENTITY)));
 
         pfnRequest = (PPF_PFN_PRIO_REQUEST)supHeapAlloc(pfnBufferSize);
-        if (pfnRequest == NULL)
+        if (pfnRequest == NULL) {
+            failedRanges++;
             continue;
+        }
 
         RtlSecureZeroMemory(pfnRequest, pfnBufferSize);
         pfnRequest->Version = 1;
@@ -4078,6 +4092,9 @@ BOOL supBuildSuperfetchMemoryMap(
                 }
             }
         }
+        else {
+            failedRanges++;
+        }
 
         supHeapFree(pfnRequest);
     }
@@ -4088,6 +4105,13 @@ BOOL supBuildSuperfetchMemoryMap(
         MemoryMap->TranslationTable = translationTable;
         MemoryMap->TableSize = currentEntry;
         MemoryMap->RangeCount = rangeCount;
+
+        if (failedRanges != 0) {
+            supPrintfEvent(kduEventError,
+                "[!] Superfetch memory map is partial, %lu range(s) could not be queried\r\n",
+                failedRanges);
+        }
+
         return TRUE;
     }
 
@@ -4162,15 +4186,23 @@ BOOL supSuperfetchVirtualToPhysical(
 BOOL supEnsureSuperfetchMemoryMap(
     _Out_ PSUPERFETCH_MEMORY_MAP* MemoryMap)
 {
+    static LONG g_SuperfetchMemoryMapLock = 0;
+
     if (MemoryMap == NULL)
         return FALSE;
 
     *MemoryMap = NULL;
 
+    while (InterlockedCompareExchange(&g_SuperfetchMemoryMapLock, 1, 0) != 0) {
+        Sleep(0);
+    }
+
     if (!g_SuperfetchMemoryMapInitialized) {
 
-        if (!supBuildSuperfetchMemoryMap(&g_SuperfetchMemoryMap))
+        if (!supBuildSuperfetchMemoryMap(&g_SuperfetchMemoryMap)) {
+            InterlockedExchange(&g_SuperfetchMemoryMapLock, 0);
             return FALSE;
+        }
 
         g_SuperfetchMemoryMapInitialized = TRUE;
 
@@ -4181,6 +4213,7 @@ BOOL supEnsureSuperfetchMemoryMap(
     }
 
     *MemoryMap = &g_SuperfetchMemoryMap;
+    InterlockedExchange(&g_SuperfetchMemoryMapLock, 0);
     return TRUE;
 }
 

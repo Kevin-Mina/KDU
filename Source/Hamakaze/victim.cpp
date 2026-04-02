@@ -4,9 +4,9 @@
 *
 *  TITLE:       VICTIM.CPP
 *
-*  VERSION:     1.46
+*  VERSION:     1.48
 *
-*  DATE:        12 Feb 2026
+*  DATE:        01 Apr 2026
 *
 *  Victim support routines.
 *
@@ -548,6 +548,7 @@ NTSTATUS CALLBACK VpLoadDriverCallback(
     _In_opt_ PVOID Param
 )
 {
+    ULONG victimId;
     NTSTATUS ntStatus = STATUS_SUCCESS;
     VICTIM_LOAD_PARAMETERS* params;
 
@@ -558,10 +559,15 @@ NTSTATUS CALLBACK VpLoadDriverCallback(
     
     params = (VICTIM_LOAD_PARAMETERS*)Param;
 
-    switch (params->Provider->VictimId) {
+    victimId = params->Provider->VictimId;
+    if (victimId >= KDU_VICTIM_MAX)
+        victimId = KDU_VICTIM_DEFAULT;
+
+    switch (victimId) {
     case KDU_VICTIM_PE1627:
     case KDU_VICTIM_PE1702:
     default:
+        // None.
         break;
     }
 

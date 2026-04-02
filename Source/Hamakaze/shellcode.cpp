@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2020 - 2025
+*  (C) COPYRIGHT AUTHORS, 2020 - 2026
 *
 *  TITLE:       SHELLCODE.CPP
 *
-*  VERSION:     1.45
+*  VERSION:     1.48
 *
-*  DATE:        30 Nov 2025
+*  DATE:        01 Apr 2026
 *
 *  Default driver mapping shellcode(s) implementation.
 *
@@ -1900,8 +1900,9 @@ PVOID ScAllocate(
     devObject.DriverObject = &drvObject;
     drvObject.MajorFunction[IRP_MJ_PNP] = (PVOID)0x0BADBEFF1CEDC01A;
 
-    ScDispatchRoutineDebugSelector(ShellVersion, pvShellCode, &devObject, &tempIrp);
+    *ShellSize = procSize;
 
+    ScDispatchRoutineDebugSelector(ShellVersion, pvShellCode, &devObject, &tempIrp);
 #else
 
     printf_s("[+] Resolving base shellcode import\r\n");

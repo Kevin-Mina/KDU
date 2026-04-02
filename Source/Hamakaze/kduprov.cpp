@@ -4,9 +4,9 @@
 *
 *  TITLE:       KDUPROV.CPP
 *
-*  VERSION:     1.47
+*  VERSION:     1.48
 *
-*  DATE:        25 Mar 2026
+*  DATE:        01 Apr 2026
 *
 *  Vulnerable drivers provider abstraction layer.
 *
@@ -19,6 +19,29 @@
 
 #include "global.h"
 #include "kduplist.h"
+#include "hvdetect.h"
+#include "envdetect.h"
+
+typedef struct _KDU_PROV_FLAG_DESC {
+    ULONG Mask;
+    LPCSTR Text;
+} KDU_PROV_FLAG_DESC, * PKDU_PROV_FLAG_DESC;
+
+static const KDU_PROV_FLAG_DESC g_KduProvFlagDescs[] = {
+    { KDUPROV_FLAGS_SIGNATURE_WHQL,        "\t->Driver is WHQL signed.\r\n" },
+    { KDUPROV_FLAGS_IGNORE_CHECKSUM,       "\t->Ignore invalid image checksum.\r\n" },
+    { KDUPROV_FLAGS_NO_UNLOAD_SUP,         "\t->Driver does not support unload procedure.\r\n" },
+    { KDUPROV_FLAGS_PML4_FROM_LOWSTUB,     "\t->Virtual to physical addresses translation require PML4 query from low stub.\r\n" },
+    { KDUPROV_FLAGS_NO_VICTIM,             "\t->No victim required.\r\n" },
+    { KDUPROV_FLAGS_PHYSICAL_BRUTE_FORCE,  "\t->Provider supports only physical memory brute-force.\r\n" },
+    { KDUPROV_FLAGS_PREFER_PHYSICAL,       "\t->Physical memory access is preferred.\r\n" },
+    { KDUPROV_FLAGS_PREFER_VIRTUAL,        "\t->Virtual memory access is preferred.\r\n" },
+    { KDUPROV_FLAGS_COMPANION_REQUIRED,    "\t->Provider expects companion to be loaded.\r\n" },
+    { KDUPROV_FLAGS_USE_SYMBOLS,           "\t->MS symbols are required to query internal information.\r\n" },
+    { KDUPROV_FLAGS_OPENPROCESS_SUPPORTED, "\t->Driver can be used to open a handle for the specified process.\r\n" },
+    { KDUPROV_FLAGS_FS_FILTER,             "\t->Driver is file system filter.\r\n" },
+    { KDUPROV_FLAGS_USE_SUPERFETCH,        "\t->Driver can be used with Superfetch for memory translation.\r\n" }
+};
 
 PKDU_DB gProvTable = NULL;
 
@@ -38,60 +61,20 @@ PKDU_DB_ENTRY KDUProviderToDbEntry(
     return NULL;
 }
 
-/*
-* KDUProvDetectHyperV
-*
-* Purpose:
-*
-* Detect hyperv presence.
-*
-*/
-VOID KDUProvDetectHyperV(
-    VOID
+VOID KDUProvDumpCapabilities(
+    _In_ KDU_DB_ENTRY* Entry
 )
 {
-#define MSFT_HV "Microsoft Hv"
-#define MSFT_HV_SIZE sizeof(MSFT_HV) - sizeof(CHAR)
-#define HV_VENDOR_MAX 12
+    ULONG i;
 
-    ULONG returnLength = 0;
-    SYSTEM_HYPERVISOR_DETAIL_INFORMATION hdi;
-    PHV_VENDOR_AND_MAX_FUNCTION pvi;
-    CHAR szVendor[32];
+    if (Entry->Flags == KDUPROV_FLAGS_NONE)
+        return;
 
-    RtlSecureZeroMemory(&hdi, sizeof(hdi));
+    printf_s("\tProvider capabilities: \r\n");
 
-    NTSTATUS ntStatus = NtQuerySystemInformation(SystemHypervisorDetailInformation,
-        &hdi, sizeof(hdi), &returnLength);
-
-    if (NT_SUCCESS(ntStatus)) {
-
-        pvi = (PHV_VENDOR_AND_MAX_FUNCTION)&hdi.HvVendorAndMaxFunction.Data;
-
-        if (RtlCompareMemory(MSFT_HV, pvi->VendorName, MSFT_HV_SIZE) == MSFT_HV_SIZE) {
-
-            supPrintfEvent(kduEventInformation, "[+] MSFT hypervisor present\r\n");
-
-        }
-        else {
-            __stosb((PBYTE)&szVendor, 0, sizeof(szVendor));
-            RtlCopyMemory(szVendor, pvi->VendorName, HV_VENDOR_MAX);
-            supPrintfEvent(kduEventInformation, "[+] The \"%s\" hypervisor present\r\n", szVendor);
-        }
-
-    }
-    else {
-
-        int CPUInfo[4] = { -1, -1, -1, -1 };
-
-        __cpuid(CPUInfo, 1);
-        if ((CPUInfo[2] >> 31) & 1) {
-            
-            __cpuid(CPUInfo, 0x40000000);
-            __stosb((PBYTE)&szVendor, 0, sizeof(szVendor));
-            RtlCopyMemory(szVendor, CPUInfo + 1, HV_VENDOR_MAX);
-            supPrintfEvent(kduEventInformation, "[+] The \"%s\" hypervisor present\r\n", szVendor);
-
+    for (i = 0; i < RTL_NUMBER_OF(g_KduProvFlagDescs); i++) {
+        if (Entry->Flags & g_KduProvFlagDescs[i].Mask) {
+            printf_s("%s", g_KduProvFlagDescs[i].Text);
         }
     }
 }
@@ -189,54 +172,7 @@ VOID KDUProvList()
         //
         // List provider flags.
         //
-        if (provData->Flags)
-            printf_s("\tProvider capabilities: \r\n");
-
-        if (provData->SignatureWHQL)
-            printf_s("\t->Driver is WHQL signed.\r\n");
-        //
-        // Some Realtek drivers are digitally signed 
-        // after binary modification with wrong PE checksum as result.
-        // Note: Windows 7 will not allow their load.
-        //
-        if (provData->IgnoreChecksum)
-            printf_s("\t->Ignore invalid image checksum.\r\n");
-
-        //
-        // Some BIOS flashing drivers does not support unload.
-        //
-        if (provData->NoUnloadSupported)
-            printf_s("\t->Driver does not support unload procedure.\r\n");
-
-        if (provData->PML4FromLowStub)
-            printf_s("\t->Virtual to physical addresses translation require PML4 query from low stub.\r\n");
-
-        if (provData->NoVictim)
-            printf_s("\t->No victim required.\r\n");
-
-        if (provData->PhysMemoryBruteForce)
-            printf_s("\t->Provider supports only physical memory brute-force.\r\n");
-
-        if (provData->PreferPhysical)
-            printf_s("\t->Physical memory access is preferred.\r\n");
-
-        if (provData->PreferVirtual)
-            printf_s("\t->Virtual memory access is preferred.\r\n");
-
-        if (provData->CompanionRequired)
-            printf_s("\t->Provider expects companion to be loaded.\r\n");
-
-        if (provData->UseSymbols)
-            printf_s("\t->MS symbols are required to query internal information.\r\n");
-
-        if (provData->OpenProcessSupported)
-            printf_s("\t->Driver can be used to open a handle for the specified process.\r\n");
-
-        if (provData->FsFilter)
-            printf_s("\t->Driver is file system filter.\r\n");
-
-        if (provData->UseSuperfetch)
-            printf_s("\t->Driver can be used with Superfetch for memory translation.\r\n");
+        KDUProvDumpCapabilities(provData);
 
         //
         // List "based" flags.
@@ -485,9 +421,12 @@ void KDUProvOpenVulnerableDriverAndRunCallbacks(
     }
     else {
 
+        //
+        // Log the actual device object name being opened to avoid confusion with service/driver name.
+        //
         supPrintfEvent(kduEventInformation,
             "[+] Driver device \"%ws\" has been opened successfully\r\n",
-            Context->Provider->LoadData->DriverName);
+            Context->Provider->LoadData->DeviceName);
 
         Context->DeviceHandle = deviceHandle;
 
@@ -605,17 +544,22 @@ BOOL WINAPI KDUProviderPostOpen(
     // Remove WRITE_DAC from result handle.
     //
     HANDLE strHandle = NULL;
+    NTSTATUS ntStatus;
 
-    if (NT_SUCCESS(NtDuplicateObject(NtCurrentProcess(),
+    ntStatus = NtDuplicateObject(NtCurrentProcess(),
         deviceHandle,
         NtCurrentProcess(),
         &strHandle,
         SYNCHRONIZE | GENERIC_WRITE | GENERIC_READ,
         0,
-        0)))
-    {
+        0);
+
+    if (NT_SUCCESS(ntStatus)) {
         NtClose(deviceHandle);
         deviceHandle = strHandle;
+    }
+    else {
+        supShowHardError("[!] Unable to narrow driver device handle access", ntStatus);
     }
 
     Context->DeviceHandle = deviceHandle;
@@ -973,6 +917,7 @@ PKDU_CONTEXT WINAPI KDUProviderCreate(
     _In_ KDU_ACTION_TYPE ActionType
 )
 {
+    ULONG victimId;
     HINSTANCE moduleBase;
     KDU_CONTEXT* Context = NULL;
     KDU_DB_ENTRY* provLoadData = NULL;
@@ -995,9 +940,14 @@ PKDU_CONTEXT WINAPI KDUProviderCreate(
         }
 
         //
-        // Check HyperV
+        // Check Hypervisor presence.
         //
-        KDUProvDetectHyperV();
+        KDUPDetectHypervisor();
+
+        //
+        // Check environment.
+        //
+        KDUDetectEnvironment();
 
         //
         // Load drivers DB.
@@ -1141,9 +1091,11 @@ PKDU_CONTEXT WINAPI KDUProviderCreate(
             Context->Victim = NULL;
         }
         else {
-            if (prov->LoadData->VictimId >= KDU_VICTIM_MAX)
-                prov->LoadData->VictimId = KDU_VICTIM_DEFAULT;
-            Context->Victim = &g_KDUVictims[prov->LoadData->VictimId];
+            victimId = prov->LoadData->VictimId;
+            if (victimId >= KDU_VICTIM_MAX)
+                victimId = KDU_VICTIM_DEFAULT;
+
+            Context->Victim = &g_KDUVictims[victimId];
         }
 
         PUNICODE_STRING CurrentDirectory = &NtCurrentPeb()->ProcessParameters->CurrentDirectory.DosPath;

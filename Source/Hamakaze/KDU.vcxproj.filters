@@ -234,6 +234,12 @@
     <ClCompile Include="idrv\ipcdec.cpp">
       <Filter>Source Files\idrv</Filter>
     </ClCompile>
+    <ClCompile Include="hvdetect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="envdetect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="global.h">
@@ -438,6 +444,12 @@
       <Filter>Source Files\idrv</Filter>
     </ClInclude>
     <ClInclude Include="idrv\ipcdec.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="hvdetect.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="envdetect.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

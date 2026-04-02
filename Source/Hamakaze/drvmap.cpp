@@ -1,12 +1,12 @@
 /*******************************************************************************
 *
-*  (C) COPYRIGHT AUTHORS, 2020 - 2025
+*  (C) COPYRIGHT AUTHORS, 2020 - 2026
 *
 *  TITLE:       DRVMAP.CPP
 *
-*  VERSION:     1.44
+*  VERSION:     1.48
 *
-*  DATE:        19 Aug 2025
+*  DATE:        01 Apr 2026
 *
 *  Driver mapping routines.
 *
@@ -583,6 +583,11 @@ BOOL KDUDriverMapInit(
             "[!] Error building the ready event handle, abort\r\n");
 
         ScFree(pvShellCode, ScSizeOf(Context->ShellVersion, NULL));
+        
+        if (sectionHandle) {
+            NtClose(sectionHandle);
+            sectionHandle = NULL;
+        }
 
         return FALSE;
     }
