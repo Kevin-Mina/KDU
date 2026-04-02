@@ -42,8 +42,8 @@ typedef struct _KDU_HYPERVISOR_INFO {
     CHAR FriendlyName[64];
 } KDU_HYPERVISOR_INFO, * PKDU_HYPERVISOR_INFO;
 
-VOID KDUPDetectHypervisor(
+VOID KDUDetectHypervisor(
     VOID);
 
-VOID KDUPQueryHypervisorInformation(
+VOID KDUQueryHypervisorInformation(
     _Out_ PKDU_HYPERVISOR_INFO HypervisorInfo); 

@@ -18,6 +18,7 @@
 *******************************************************************************/
 
 #include "global.h"
+#include "provdb.h"
 #include "kduplist.h"
 #include "hvdetect.h"
 #include "envdetect.h"
@@ -44,6 +45,8 @@ static const KDU_PROV_FLAG_DESC g_KduProvFlagDescs[] = {
 };
 
 PKDU_DB gProvTable = NULL;
+static KDU_DB_SOURCE_TYPE g_KduDbSource = KduDbSourceAuto;
+static HINSTANCE g_KduDbModule = NULL;
 
 PKDU_DB_ENTRY KDUProviderToDbEntry(
     _In_ ULONG ProviderId)
@@ -102,6 +105,22 @@ LPCSTR KDUFirmwareToString(
 }
 
 /*
+* KDUProvGetActiveDbCount
+*
+* Purpose:
+*
+* Return count of providers in the active database.
+*
+*/
+ULONG KDUProvGetActiveDbCount()
+{
+    if (gProvTable)
+        return gProvTable->NumberOfEntries;
+
+    return 0;
+}
+
+/*
 * KDUProvGetCount
 *
 * Purpose:
@@ -112,6 +131,36 @@ LPCSTR KDUFirmwareToString(
 ULONG KDUProvGetCount()
 {
     return RTL_NUMBER_OF(g_KDUProviders);
+}
+
+/*
+* KDUProviderSetDbSource
+*
+* Purpose:
+*
+* Set preferred providers database source.
+*
+*/
+VOID KDUProviderSetDbSource(
+    _In_ KDU_DB_SOURCE_TYPE DbSource
+)
+{
+    g_KduDbSource = DbSource;
+}
+
+/*
+* KDUProviderGetDbSource
+*
+* Purpose:
+*
+* Return current preferred providers database source.
+*
+*/
+KDU_DB_SOURCE_TYPE KDUProviderGetDbSource(
+    VOID
+)
+{
+    return g_KduDbSource;
 }
 
 /*
@@ -411,8 +460,8 @@ void KDUProvOpenVulnerableDriverAndRunCallbacks(
     }
 
     NTSTATUS ntStatus = supOpenDriver(Context->Provider->LoadData->DeviceName,
-            SYNCHRONIZE | WRITE_DAC | GENERIC_WRITE | GENERIC_READ,
-            &deviceHandle);
+        SYNCHRONIZE | WRITE_DAC | GENERIC_WRITE | GENERIC_READ,
+        &deviceHandle);
 
     if (!NT_SUCCESS(ntStatus)) {
 
@@ -603,11 +652,131 @@ BOOL WINAPI KDUOpenProcess(
 }
 
 /*
+* KDUProviderValidateDb
+*
+* Purpose:
+*
+* Validate providers database version and table.
+*
+*/
+static BOOL KDUProviderValidateDb(
+    _In_ LPCSTR DbName,
+    _In_ KDU_DB_VERSION * VersionInfo,
+    _In_ PKDU_DB ProviderTable
+)
+{
+    if (VersionInfo == NULL) {
+        supPrintfEvent(kduEventError,
+            "[!] %s version data not found\r\n",
+            DbName);
+        return FALSE;
+    }
+
+    if (VersionInfo->MajorVersion != KDU_VERSION_MAJOR ||
+        VersionInfo->MinorVersion != KDU_VERSION_MINOR ||
+        VersionInfo->Revision != KDU_VERSION_REVISION ||
+        VersionInfo->Build != KDU_VERSION_BUILD)
+    {
+        supPrintfEvent(kduEventError,
+            "[!] %s has wrong version, expected %lu.%lu.%lu.%lu, got %lu.%lu.%lu.%lu\r\n",
+            DbName,
+            KDU_VERSION_MAJOR,
+            KDU_VERSION_MINOR,
+            KDU_VERSION_REVISION,
+            KDU_VERSION_BUILD,
+            VersionInfo->MajorVersion,
+            VersionInfo->MinorVersion,
+            VersionInfo->Revision,
+            VersionInfo->Build);
+
+        return FALSE;
+    }
+
+    if (ProviderTable == NULL || ProviderTable->Entries == NULL || ProviderTable->NumberOfEntries == 0) {
+        supPrintfEvent(kduEventError,
+            "[!] %s table is invalid\r\n",
+            DbName);
+        return FALSE;
+    }
+
+    printf_s("[+] Database %s version is OK\r\n", DbName);
+
+    return TRUE;
+}
+
+/*
+* KDUProviderLoadExternalDb
+*
+* Purpose:
+*
+* Load providers database from external drv64.dll.
+*
+*/
+static HINSTANCE KDUProviderLoadExternalDb(
+    _Out_ PKDU_DB * ProviderTable
+)
+{
+    HINSTANCE hInstance;
+    KDU_DB_VERSION* pVersionInfo;
+    PKDU_DB pTable;
+
+    *ProviderTable = NULL;
+
+    SetDllDirectory(NULL);
+    hInstance = LoadLibraryEx(DRV64DLL, NULL, DONT_RESOLVE_DLL_REFERENCES);
+    if (hInstance == NULL)
+        return NULL;
+
+    printf_s("[+] Drivers database \"%ws\" loaded at 0x%p\r\n", DRV64DLL, hInstance);
+
+    pVersionInfo = (KDU_DB_VERSION*)GetProcAddress(hInstance, "gVersion");
+    pTable = (PKDU_DB)GetProcAddress(hInstance, "gProvTable");
+
+    if (!KDUProviderValidateDb("KDUEXT", pVersionInfo, pTable)) {
+        FreeLibrary(hInstance);
+        return NULL;
+    }
+
+    *ProviderTable = pTable;
+    return hInstance;
+}
+
+/*
+* KDUProviderLoadEmbeddedDb
+*
+* Purpose:
+*
+* Initialize providers database from Hamakaze embedded data.
+*
+*/
+static HINSTANCE KDUProviderLoadEmbeddedDb(
+    _Out_ PKDU_DB * ProviderTable
+)
+{
+    HINSTANCE hInstance;
+
+    *ProviderTable = NULL;
+    hInstance = GetModuleHandle(NULL);
+
+    if (!KDUProviderValidateDb("KDUEMB",
+        &gVersionEmbedded,
+        &gProvTableEmbedded))
+    {
+        return NULL;
+    }
+
+    printf_s("[+] Embedded drivers database selected, module 0x%p\r\n", hInstance);
+
+    *ProviderTable = &gProvTableEmbedded;
+    return hInstance;
+}
+
+/*
 * KDUProviderLoadDB
 *
 * Purpose:
 *
-* Load drivers database file.
+* Load drivers database file or use embedded providers database.
 *
 */
 HINSTANCE KDUProviderLoadDB(
@@ -615,64 +784,55 @@ HINSTANCE KDUProviderLoadDB(
 )
 {
     HINSTANCE hInstance;
-    KDU_DB_VERSION *pVersionInfo;
-    BOOL bFailed = TRUE;
+    PKDU_DB providerTable;
 
     FUNCTION_ENTER_MSG(__FUNCTION__);
 
-    SetDllDirectory(NULL);
-    hInstance = LoadLibraryEx(DRV64DLL, NULL, DONT_RESOLVE_DLL_REFERENCES);
-    if (hInstance) {
-        printf_s("[+] Drivers database \"%ws\" loaded at 0x%p\r\n", DRV64DLL, hInstance);
+    hInstance = NULL;
+    providerTable = NULL;
 
-        do {
+    do {
 
-            pVersionInfo = (PKDU_DB_VERSION)GetProcAddress(hInstance, "gVersion");
-            if (pVersionInfo == NULL) {
-                supPrintfEvent(kduEventError, "[!] Providers version data not found\r\n");
-                break;
-            }
-
-            if (pVersionInfo->MajorVersion != KDU_VERSION_MAJOR ||
-                pVersionInfo->MinorVersion != KDU_VERSION_MINOR ||
-                pVersionInfo->Revision != KDU_VERSION_REVISION ||
-                pVersionInfo->Build != KDU_VERSION_BUILD)
-            {
-                supPrintfEvent(kduEventError, "[!] Providers database has wrong version, expected %lu.%lu.%lu.%lu, got %lu.%lu.%lu.%lu\r\n",
-                    KDU_VERSION_MAJOR,
-                    KDU_VERSION_MINOR,
-                    KDU_VERSION_REVISION,
-                    KDU_VERSION_BUILD,
-                    pVersionInfo->MajorVersion,
-                    pVersionInfo->MinorVersion,
-                    pVersionInfo->Revision,
-                    pVersionInfo->Build);
-
-                break;
-            }
-            else {
-                printf_s("[+] Drivers database version is OK\r\n");
-            }
-
-            gProvTable = (PKDU_DB)GetProcAddress(hInstance, "gProvTable");
-            if (gProvTable == NULL) {
-                supPrintfEvent(kduEventError, "[!] Providers table not found\r\n");
-                break;
-            }
-
-            bFailed = FALSE;
-
-        } while (FALSE);
-
-        if (bFailed) {
-            FreeLibrary(hInstance);
-            hInstance = NULL;
+        if (g_KduDbModule != NULL && gProvTable != NULL) {
+            hInstance = g_KduDbModule;
+            break;
         }
 
-    }
-    else {
-        supShowWin32Error("[!] Cannot load drivers database", GetLastError());
-    }
+        switch (g_KduDbSource) {
+
+        case KduDbSourceExternalDll:
+
+            hInstance = KDUProviderLoadExternalDb(&providerTable);
+            break;
+
+        case KduDbSourceEmbedded:
+
+            hInstance = KDUProviderLoadEmbeddedDb(&providerTable);
+            break;
+
+        case KduDbSourceAuto:
+        default:
+
+            hInstance = KDUProviderLoadExternalDb(&providerTable);
+            if (hInstance == NULL) {
+                // Fall back to embedded providers database when external DLL is unavailable.
+                hInstance = KDUProviderLoadEmbeddedDb(&providerTable);
+            }
+            break;
+        }
+
+        if (hInstance == NULL || providerTable == NULL) {
+            if (g_KduDbSource == KduDbSourceExternalDll) {
+                supShowWin32Error("[!] Cannot load drivers database", GetLastError());
+            }
+            hInstance = NULL;
+            break;
+        }
+
+        g_KduDbModule = hInstance;
+        gProvTable = providerTable;
+
+    } while (FALSE);
 
     FUNCTION_LEAVE_MSG(__FUNCTION__);
 
@@ -707,11 +867,11 @@ BOOL KDUpRwHandlersAreSet(
 *
 */
 BOOL KDUProviderVerifyActionType(
-    _In_ KDU_PROVIDER* Provider,
+    _In_ KDU_PROVIDER * Provider,
     _In_ KDU_ACTION_TYPE ActionType)
 {
     BOOL bResult = TRUE;
-    
+
 #ifdef _DEBUG
     DbgPrint("KDUProviderVerifyActionType bypassed\r\n");
     return TRUE;
@@ -930,19 +1090,10 @@ PKDU_CONTEXT WINAPI KDUProviderCreate(
 
     do {
 
-        if (ProviderId >= KDUProvGetCount()) {
-            
-            supPrintfEvent(kduEventInformation,
-                "[+] Provider with id %lu is not supported, will be using default provider (0)\r\n",
-                ProviderId);
-
-            ProviderId = KDU_PROVIDER_DEFAULT;
-        }
-
         //
         // Check Hypervisor presence.
         //
-        KDUPDetectHypervisor();
+        KDUDetectHypervisor();
 
         //
         // Check environment.
@@ -957,11 +1108,25 @@ PKDU_CONTEXT WINAPI KDUProviderCreate(
             break;
         }
 
+        //
+        // Load provider data.
+        //
         provLoadData = KDUProviderToDbEntry(ProviderId);
         if (provLoadData == NULL) {
-            supPrintfEvent(kduEventError,
-                "[!] Requested provider data was not found in database, abort\r\n");
-            break;
+            if (ProviderId != KDU_PROVIDER_DEFAULT) {
+                supPrintfEvent(kduEventInformation,
+                    "[+] Provider with id %lu was not found in active database, will be using default provider (0)\r\n",
+                    ProviderId);
+
+                ProviderId = KDU_PROVIDER_DEFAULT;
+                provLoadData = KDUProviderToDbEntry(ProviderId);
+            }
+
+            if (provLoadData == NULL) {
+                supPrintfEvent(kduEventError,
+                    "[!] Requested provider data was not found in database, abort\r\n");
+                break;
+            }
         }
 
         prov = &g_KDUProviders[ProviderId];

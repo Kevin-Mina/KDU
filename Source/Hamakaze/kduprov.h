@@ -4,9 +4,9 @@
 *
 *  TITLE:       KDUPROV.H
 *
-*  VERSION:     1.47
+*  VERSION:     1.48
 *
-*  DATE:        25 Mar 2026
+*  DATE:        01 Apr 2026
 *
 *  Provider support routines.
 *
@@ -245,6 +245,13 @@ typedef struct _KDU_PHYSMEM_ENUM_PARAMS {
     _In_ ULONG JmpAddress;
 
 } KDU_PHYSMEM_ENUM_PARAMS, * PKDU_PHYSMEM_ENUM_PARAMS;
+
+typedef enum _KDU_DB_SOURCE_TYPE {
+    KduDbSourceNone = 0,
+    KduDbSourceExternalDll,
+    KduDbSourceEmbedded,
+    KduDbSourceAuto
+} KDU_DB_SOURCE_TYPE;
 
 ULONG KDUProvGetCount();
 PKDU_DB KDUReferenceLoadDB();

@@ -38,7 +38,15 @@ static const KDU_HYPERVISOR_VENDOR_DESC g_KduHypervisorVendors[] = {
     { "ACRNACRNACRN",   HypervisorVendorAcrn,       "Project ACRN" }
 };
 
-VOID KDUPTrimVendorString(
+/*
+* KDUTrimVendorString
+*
+* Purpose:
+*
+* Trim trailing whitespace characters from hypervisor vendor string.
+*
+*/
+VOID KDUTrimVendorString(
     _Inout_updates_(BufferSize) PCHAR VendorName,
     _In_ ULONG BufferSize
 )
@@ -62,7 +70,15 @@ VOID KDUPTrimVendorString(
     }
 }
 
-BOOL KDUPIsPrintableVendorString(
+/*
+* KDUIsPrintableVendorString
+*
+* Purpose:
+*
+* Verify that hypervisor vendor string contains only printable characters.
+*
+*/
+BOOL KDUIsPrintableVendorString(
     _In_ LPCSTR VendorName,
     _In_ ULONG Length
 )
@@ -86,7 +102,15 @@ BOOL KDUPIsPrintableVendorString(
     return TRUE;
 }
 
-VOID KDUPClassifyHypervisorVendor(
+/*
+* KDUClassifyHypervisorVendor
+*
+* Purpose:
+*
+* Classify hypervisor vendor string and assign friendly vendor name.
+*
+*/
+VOID KDUClassifyHypervisorVendor(
     _Inout_ PKDU_HYPERVISOR_INFO HypervisorInfo
 )
 {
@@ -98,7 +122,7 @@ VOID KDUPClassifyHypervisorVendor(
     if (!HypervisorInfo->VendorKnown)
         return;
 
-    KDUPTrimVendorString(HypervisorInfo->VendorName, RTL_NUMBER_OF(HypervisorInfo->VendorName));
+    KDUTrimVendorString(HypervisorInfo->VendorName, RTL_NUMBER_OF(HypervisorInfo->VendorName));
 
     for (i = 0; i < RTL_NUMBER_OF(g_KduHypervisorVendors); i++) {
         if (_strcmpi_a(HypervisorInfo->VendorName, g_KduHypervisorVendors[i].VendorString) == 0) {
@@ -111,7 +135,15 @@ VOID KDUPClassifyHypervisorVendor(
     _strcpy_a(HypervisorInfo->FriendlyName, HypervisorInfo->VendorName);
 }
 
-VOID KDUPCaptureHypervisorVendorFromCpuid(
+/*
+* KDUCaptureHypervisorVendorFromCpuid
+*
+* Purpose:
+*
+* Query hypervisor vendor string and maximum leaf through CPUID hypervisor interface.
+*
+*/
+VOID KDUCaptureHypervisorVendorFromCpuid(
     _Inout_ PKDU_HYPERVISOR_INFO HypervisorInfo
 )
 {
@@ -134,7 +166,7 @@ VOID KDUPCaptureHypervisorVendorFromCpuid(
     RtlCopyMemory(&HypervisorInfo->VendorName[8], &cpuInfo[3], sizeof(INT));
     HypervisorInfo->VendorName[12] = 0;
 
-    if (KDUPIsPrintableVendorString(HypervisorInfo->VendorName, 12)) {
+    if (KDUIsPrintableVendorString(HypervisorInfo->VendorName, 12)) {
         HypervisorInfo->VendorKnown = (HypervisorInfo->VendorName[0] != 0);
     }
     else {
@@ -143,7 +175,16 @@ VOID KDUPCaptureHypervisorVendorFromCpuid(
     }
 }
 
-VOID KDUPQueryHypervisorInformation(
+/*
+* KDUQueryHypervisorInformation
+*
+* Purpose:
+*
+* Query hypervisor presence and vendor information using kernel interface first
+* and CPUID fallback when needed.
+*
+*/
+VOID KDUQueryHypervisorInformation(
     _Out_ PKDU_HYPERVISOR_INFO HypervisorInfo
 )
 {
@@ -172,7 +213,7 @@ VOID KDUPQueryHypervisorInformation(
         RtlCopyMemory(HypervisorInfo->VendorName, pvi->VendorName, 12);
         HypervisorInfo->VendorName[12] = 0;
 
-        if (KDUPIsPrintableVendorString(HypervisorInfo->VendorName, 12) &&
+        if (KDUIsPrintableVendorString(HypervisorInfo->VendorName, 12) &&
             HypervisorInfo->VendorName[0] != 0)
         {
             HypervisorInfo->VendorKnown = TRUE;
@@ -182,7 +223,7 @@ VOID KDUPQueryHypervisorInformation(
             HypervisorInfo->VendorKnown = FALSE;
         }
 
-        KDUPClassifyHypervisorVendor(HypervisorInfo);
+        KDUClassifyHypervisorVendor(HypervisorInfo);
         return;
     }
 
@@ -199,17 +240,25 @@ VOID KDUPQueryHypervisorInformation(
 
     HypervisorInfo->Present = TRUE;
 
-    KDUPCaptureHypervisorVendorFromCpuid(HypervisorInfo);
-    KDUPClassifyHypervisorVendor(HypervisorInfo);
+    KDUCaptureHypervisorVendorFromCpuid(HypervisorInfo);
+    KDUClassifyHypervisorVendor(HypervisorInfo);
 }
 
-VOID KDUPDetectHypervisor(
+/*
+* KDUDetectHypervisor
+*
+* Purpose:
+*
+* Query hypervisor information and print diagnostic message when hypervisor is present.
+*
+*/
+VOID KDUDetectHypervisor(
     VOID
 )
 {
     KDU_HYPERVISOR_INFO hypervisorInfo;
 
-    KDUPQueryHypervisorInformation(&hypervisorInfo);
+    KDUQueryHypervisorInformation(&hypervisorInfo);
 
     if (!hypervisorInfo.Present)
         return;
