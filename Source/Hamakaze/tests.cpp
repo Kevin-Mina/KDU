@@ -6,7 +6,7 @@
 *
 *  VERSION:     1.48
 *
-*  DATE:        25 Mar 2026
+*  DATE:        02 May 2026
 *
 *  KDU tests.
 *
@@ -137,7 +137,10 @@ NTSTATUS DebugQueryCiOptionsFromMappedImage(
 }
 
 ULONG_PTR DebugQueryCurrentCiOptionsAddress(
-    _In_ ULONG NtBuildNumber)
+    _In_ ULONG NtBuildNumber,
+    _In_opt_ LPCWSTR DllPath,
+    _In_ BOOL QueryTest
+    )
 {
     NTSTATUS ntStatus;
     ULONG loadedImageSize;
@@ -156,13 +159,19 @@ ULONG_PTR DebugQueryCurrentCiOptionsAddress(
         return 0;
     }
 
-    if (!GetSystemDirectoryW(szFullModuleName, MAX_PATH)) {
-        printf_s("[!] GetSystemDirectoryW failed, gle=%lu\r\n", GetLastError());
-        return 0;
-    }
+    if (QueryTest) {
+        _strcpy(szFullModuleName, DllPath);
+    } 
+    else {
 
-    _strcat(szFullModuleName, L"\\");
-    _strcat(szFullModuleName, CI_DLL);
+        if (!GetSystemDirectoryW(szFullModuleName, MAX_PATH)) {
+            printf_s("[!] GetSystemDirectoryW failed, gle=%lu\r\n", GetLastError());
+            return 0;
+        }
+
+        _strcat(szFullModuleName, L"\\");
+        _strcat(szFullModuleName, CI_DLL);
+    }
 
     mappedImageBase = LoadLibraryEx(szFullModuleName, NULL, DONT_RESOLVE_DLL_REFERENCES);
     if (mappedImageBase == NULL) {
@@ -237,7 +246,7 @@ VOID KDUTestLoad()
 
 VOID KDUTestDSE(PKDU_CONTEXT Context)
 {
-    ULONG_PTR g_CiOptions = DebugQueryCurrentCiOptionsAddress(USER_SHARED_DATA->NtBuildNumber);
+    ULONG_PTR g_CiOptions = DebugQueryCurrentCiOptionsAddress(USER_SHARED_DATA->NtBuildNumber, NULL, FALSE);
     ULONG_PTR oldValue = 0, newValue = 0x0, testValue = 0;
     KDU_PROVIDER* prov = Context->Provider;
 
@@ -261,6 +270,17 @@ VOID KDUTestDSE(PKDU_CONTEXT Context)
     if (prov->Callbacks.WriteKernelVM) {
         prov->Callbacks.WriteKernelVM(Context->DeviceHandle, g_CiOptions, &oldValue, sizeof(oldValue));
     }
+}
+
+VOID KDUTestDSEQuery(
+    _In_ ULONG NtBuildNumber
+)
+{
+    ULONG_PTR g_CiOptions = DebugQueryCurrentCiOptionsAddress(NtBuildNumber, L"C:\\Dumps\\CI_26100_8246.dll", TRUE);
+    if (g_CiOptions == 0)
+        printf_s("[!] g_CiOptions not found\r\n");
+    else
+        printf_s("[+] g_CiOptions %llX", g_CiOptions);
 }
 
 BOOL WINAPI TestPhysMemEnumCallback(
@@ -492,8 +512,9 @@ VOID KDUTest()
 {
     PKDU_CONTEXT Context;
 
-    // KDUTestLoad();
-    // TestSymbols();
+    //KDUTestLoad();
+    //TestSymbols();
+    //KDUTestDSEQuery(NT_WIN11_24H2);
     Context = KDUProviderCreate(KDU_PROVIDER_SHANGKE_WHD,
         FALSE,
         NT_WIN10_20H1,

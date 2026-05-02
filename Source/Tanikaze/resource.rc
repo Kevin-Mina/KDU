@@ -193,8 +193,8 @@ IDR_SHANGKE_WHD         RCDATA                  "drv\\WinHwDrv64.bin"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,4,8,2603
- PRODUCTVERSION 1,4,8,2603
+ FILEVERSION 1,4,8,2605
+ PRODUCTVERSION 1,4,8,2605
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -211,12 +211,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "UG North"
             VALUE "FileDescription", "Kernel Driver Utility Database"
-            VALUE "FileVersion", "1.4.8.2603"
+            VALUE "FileVersion", "1.4.8.2605"
             VALUE "InternalName", "Tanikaze.dll"
             VALUE "LegalCopyright", "Copyright (C) 2020 - 2026 KDU Project"
             VALUE "OriginalFilename", "Tanikaze.dll"
             VALUE "ProductName", "KDU"
-            VALUE "ProductVersion", "1.4.8.2603"
+            VALUE "ProductVersion", "1.4.8.2605"
         END
     END
     BLOCK "VarFileInfo"
